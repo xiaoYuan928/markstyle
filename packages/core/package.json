@@ -1,0 +1,30 @@
+{
+  "name": "@md/core",
+  "type": "module",
+  "version": "2.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./renderer": "./src/renderer/index.ts",
+    "./extensions": "./src/extensions/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./theme": "./src/theme/index.ts"
+  },
+  "dependencies": {
+    "@md/shared": "workspace:*",
+    "es-toolkit": "catalog:",
+    "fflate": "catalog:",
+    "front-matter": "catalog:",
+    "highlight.js": "catalog:",
+    "isomorphic-dompurify": "catalog:",
+    "marked": "catalog:",
+    "mermaid": "catalog:",
+    "postcss": "catalog:",
+    "postcss-calc": "catalog:",
+    "postcss-custom-properties": "catalog:",
+    "reading-time": "catalog:"
+  },
+  "devDependencies": {
+    "@md/config": "workspace:*"
+  }
+}

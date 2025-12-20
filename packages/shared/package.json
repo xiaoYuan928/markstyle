@@ -1,0 +1,46 @@
+{
+  "name": "@md/shared",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./configs": "./src/configs/index.ts",
+    "./configs/*": "./src/configs/*.ts",
+    "./constants": "./src/constants/index.ts",
+    "./constants/*": "./src/constants/*.ts",
+    "./types": "./src/types/index.ts",
+    "./types/*": "./src/types/*.ts",
+    "./utils": "./src/utils/index.ts",
+    "./utils/*": "./src/utils/*.ts",
+    "./editor": "./src/editor/index.ts",
+    "./editor/*": "./src/editor/*.ts"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "catalog:",
+    "@codemirror/commands": "catalog:",
+    "@codemirror/lang-css": "catalog:",
+    "@codemirror/lang-javascript": "catalog:",
+    "@codemirror/lang-markdown": "catalog:",
+    "@codemirror/language": "catalog:",
+    "@codemirror/language-data": "catalog:",
+    "@codemirror/lint": "catalog:",
+    "@codemirror/search": "catalog:",
+    "@fsegurai/codemirror-theme-vscode-dark": "catalog:",
+    "@fsegurai/codemirror-theme-vscode-light": "catalog:",
+    "@replit/codemirror-indentation-markers": "catalog:",
+    "axios": "catalog:",
+    "es-toolkit": "catalog:",
+    "marked": "catalog:",
+    "reading-time": "catalog:",
+    "remark-parse": "catalog:",
+    "remark-stringify": "catalog:",
+    "unified": "catalog:",
+    "unist-util-visit": "catalog:"
+  },
+  "devDependencies": {
+    "@md/config": "workspace:*",
+    "@types/mdast": "catalog:",
+    "@types/unist": "catalog:"
+  }
+}

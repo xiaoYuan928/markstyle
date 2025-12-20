@@ -1,0 +1,143 @@
+/**
+ * MD 基础主题样式
+ * 包含所有元素的基础样式和 CSS 变量定义
+ */
+
+/* ==================== 容器样式 ==================== */
+section,
+container {
+  font-family: var(--md-font-family);
+  font-size: var(--md-font-size);
+  line-height: var(--md-line-height, 1.75);
+  text-align: left;
+}
+
+/* 确保 #output 容器应用基础样式 */
+#output {
+  font-family: var(--md-font-family);
+  font-size: var(--md-font-size);
+  line-height: var(--md-line-height, 1.75);
+  text-align: left;
+}
+
+/* 去除第一个元素的 margin-top */
+#output section > :first-child {
+  margin-top: 0 !important;
+}
+
+/* ==================== 代码块通用样式 ==================== */
+/* 代码块容器 - 完整样式确保所有主题一致 */
+pre.code__pre,
+.hljs.code__pre {
+  position: relative;
+  font-size: 90%;
+  overflow-x: auto;
+  border-radius: 8px;
+  padding: 0 !important;
+  line-height: 1.5;
+  margin: 10px 8px;
+  background: #282c34 !important;
+  border: none;
+}
+
+/* 代码块内的 code 标签样式 - 覆盖行内代码样式 */
+pre.code__pre > code,
+.hljs.code__pre > code {
+  display: -webkit-box;
+  padding: 0.5em 1em 1em;
+  overflow-x: auto;
+  text-indent: 0;
+  color: #abb2bf;
+  background: transparent !important;
+  white-space: nowrap;
+  margin: 0;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-family:
+    'Fira Code',
+    Menlo,
+    Operator Mono,
+    Consolas,
+    Monaco,
+    monospace;
+}
+
+/* 重置代码块内所有元素的伪元素，防止主题样式污染 */
+pre.code__pre *::before,
+.hljs.code__pre *::before,
+pre.code__pre *::after,
+.hljs.code__pre *::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Mac 风格按钮 - 保留其伪元素 */
+.mac-sign {
+  display: flex;
+  align-items: center;
+}
+
+/* 确保代码块内的 section 不受外部样式影响 */
+pre.code__pre section,
+.hljs.code__pre section {
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* 代码块内按钮元素的通用样式 */
+pre.code__pre button,
+.hljs.code__pre button {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+pre.code__pre button:hover,
+.hljs.code__pre button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 复制按钮样式 */
+pre.code__pre .copy-btn,
+.hljs.code__pre .copy-btn,
+pre.code__pre .copy-button,
+.hljs.code__pre .copy-button,
+pre.code__pre [class*="copy"],
+.hljs.code__pre [class*="copy"] {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  z-index: 10;
+}
+
+pre.code__pre .copy-btn:hover,
+.hljs.code__pre .copy-btn:hover,
+pre.code__pre .copy-button:hover,
+.hljs.code__pre .copy-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 确保语言标签样式正确 */
+pre.code__pre [class*="lang-label"],
+.hljs.code__pre [class*="lang-label"],
+pre.code__pre .language-label,
+.hljs.code__pre .language-label {
+  color: #ccc;
+  font-size: 12px;
+  background: transparent;
+}
