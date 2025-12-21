@@ -31,7 +31,7 @@ export function SettingsPanel() {
   return (
     <aside className="w-72 bg-surface dark:bg-surface border-l border-border flex flex-col shrink-0 overflow-y-auto z-10">
       <div className="p-4 border-b border-border flex justify-between items-center">
-        <h2 className="font-semibold text-sm text-gray-900 dark:text-white uppercase tracking-wide">Typesetting</h2>
+        <h2 className="font-semibold text-sm text-gray-900 dark:text-white tracking-wide">排版设置</h2>
         <button
           onClick={resetTheme}
           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
@@ -43,7 +43,7 @@ export function SettingsPanel() {
       <div className="p-5 space-y-8">
         {/* Article Theme Section */}
         <div>
-          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase">Article Style</label>
+          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">文章风格</label>
           <div className="flex flex-wrap gap-2">
             {themeOptions.map(option => (
               <button
@@ -67,11 +67,11 @@ export function SettingsPanel() {
 
         {/* Typography Section */}
         <div>
-          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase">Typography</label>
+          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">字体排版</label>
           <div className="space-y-4">
             {/* Font Family */}
             <div>
-              <div className="text-xs text-gray-500 mb-1">Font Family</div>
+              <div className="text-xs text-gray-500 mb-1">字体</div>
               <select
                 value={fontFamily}
                 onChange={e => setFontFamily(e.target.value)}
@@ -88,7 +88,7 @@ export function SettingsPanel() {
             {/* Font Size */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <div className="text-xs text-gray-500">Font Size</div>
+                <div className="text-xs text-gray-500">字号</div>
                 <div className="text-xs text-gray-400 font-mono">{fontSize}</div>
               </div>
               <input
@@ -104,7 +104,7 @@ export function SettingsPanel() {
             {/* Line Height */}
             <div>
               <div className="flex justify-between items-center mb-1">
-                <div className="text-xs text-gray-500">Line Height</div>
+                <div className="text-xs text-gray-500">行高</div>
                 <div className="text-xs text-gray-400 font-mono">{lineHeight}</div>
               </div>
               <input
@@ -124,7 +124,7 @@ export function SettingsPanel() {
 
         {/* Color Mode Section */}
         <div>
-          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase">Color Mode</label>
+          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">颜色模式</label>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <button
               onClick={() => setColorMode('light')}
@@ -137,7 +137,7 @@ export function SettingsPanel() {
             >
               <span className="material-symbols-outlined text-[18px] mr-1">light_mode</span>
               {' '}
-              Light
+              浅色
             </button>
             <button
               onClick={() => setColorMode('dark')}
@@ -150,43 +150,45 @@ export function SettingsPanel() {
             >
               <span className="material-symbols-outlined text-[18px] mr-1">dark_mode</span>
               {' '}
-              Dark
+              深色
             </button>
           </div>
 
-          {/* Accent Color */}
-          <div>
-            <div className="text-xs text-gray-500 mb-2">Accent Color</div>
-            <div className="flex space-x-3">
-              {PRIMARY_COLORS.map(color => (
-                <button
-                  key={color.name}
-                  onClick={() => setPrimaryColor(color.value)}
-                  className={cn(
-                    'w-6 h-6 rounded-full transition-all',
-                    primaryColor === color.value
-                      ? 'ring-2 ring-offset-2 dark:ring-offset-gray-900'
-                      : 'hover:ring-2 hover:ring-offset-2 dark:ring-offset-gray-900',
-                  )}
-                  style={{
-                    backgroundColor: color.value,
-                    '--tw-ring-color': color.value,
-                  } as React.CSSProperties}
-                  title={color.label}
-                />
-              ))}
+          {/* Accent Color - 仅在简洁主题下显示 */}
+          {theme === 'simple' && (
+            <div>
+              <div className="text-xs text-gray-500 mb-2">主题色</div>
+              <div className="flex space-x-3">
+                {PRIMARY_COLORS.map(color => (
+                  <button
+                    key={color.name}
+                    onClick={() => setPrimaryColor(color.value)}
+                    className={cn(
+                      'w-6 h-6 rounded-full transition-all',
+                      primaryColor === color.value
+                        ? 'ring-2 ring-offset-2 dark:ring-offset-gray-900'
+                        : 'hover:ring-2 hover:ring-offset-2 dark:ring-offset-gray-900',
+                    )}
+                    style={{
+                      backgroundColor: color.value,
+                      '--tw-ring-color': color.value,
+                    } as React.CSSProperties}
+                    title={color.label}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="h-px bg-gray-200 dark:bg-gray-700" />
 
         {/* Layout Section */}
         <div>
-          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase">Layout</label>
+          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">布局</label>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Max Width</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">最大宽度</span>
               <select
                 value={maxWidth}
                 onChange={e => setMaxWidth(e.target.value)}
@@ -201,7 +203,7 @@ export function SettingsPanel() {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Show Line Numbers</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">显示行号</span>
               <button
                 onClick={() => setShowLineNumber(!isShowLineNumber)}
                 className={cn(
@@ -219,7 +221,7 @@ export function SettingsPanel() {
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">Sync Scroll</span>
+              <span className="text-sm text-gray-600 dark:text-gray-300">同步滚动</span>
               <button
                 onClick={() => setSyncScroll(!syncScroll)}
                 className={cn(
