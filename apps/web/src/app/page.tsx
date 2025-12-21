@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { Editor } from '@/components/editor/Editor'
 import { usePostStore } from '@/stores'
 
-export default function Home() {
+export default function EditorPage() {
   const initialize = usePostStore(state => state.initialize)
   const isInitialized = usePostStore(state => state.isInitialized)
   const isLoading = usePostStore(state => state.isLoading)

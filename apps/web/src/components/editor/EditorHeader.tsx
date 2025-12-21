@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
@@ -47,10 +48,10 @@ export function EditorHeader() {
   return (
     <header className="h-14 bg-surface dark:bg-surface border-b border-border flex items-center px-4 justify-between shrink-0 z-20 relative">
       {/* Left: Logo */}
-      <div className="flex items-center space-x-2">
+      <Link href="/home" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
         <span className="material-symbols-outlined text-primary text-2xl">edit_note</span>
         <span className="font-bold text-lg text-gray-900 dark:text-white hidden sm:block">MarkStyle</span>
-      </div>
+      </Link>
 
       {/* Right: Actions */}
       <div className="flex items-center space-x-2">
