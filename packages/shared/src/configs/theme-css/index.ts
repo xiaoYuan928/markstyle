@@ -386,6 +386,7 @@ th {
   color: #3f3f3f;
   word-break: keep-all;
   background: rgba(0, 0, 0, 0.05);
+  text-align: left;
 }
 
 td {
@@ -393,6 +394,7 @@ td {
   padding: 0.25em 0.5em;
   color: #3f3f3f;
   word-break: keep-all;
+  text-align: left;
 }
 
 /* ==================== 暗色模式适配 ==================== */
@@ -594,6 +596,7 @@ img {
 /* ==================== 列表 ==================== */
 ul {
   list-style: none;
+  padding-left: 0;
 }
 
 li {
@@ -601,10 +604,8 @@ li {
   color: #3d2914;
 }
 
-li::before {
-  content: '•';
+.li-bullet {
   color: #C41E3A;
-  margin-right: 0.5em;
 }
 
 /* ==================== 分隔线 ==================== */
@@ -849,6 +850,7 @@ img {
 /* ==================== 列表 ==================== */
 ul {
   list-style: none;
+  padding-left: 0;
 }
 
 li {
@@ -856,10 +858,8 @@ li {
   color: #c0c0c0;
 }
 
-li::before {
-  content: '▹';
+.li-bullet {
   color: #00D9FF;
-  margin-right: 0.5em;
   text-shadow: 0 0 5px #00D9FF;
 }
 
@@ -1082,19 +1082,16 @@ img {
 /* ==================== 列表 ==================== */
 ul {
   list-style: none;
+  padding-left: 0;
 }
 
 li {
   margin: 0.5em 8px;
   color: #2d3436;
-  position: relative;
 }
 
-li::before {
-  content: '○';
+.li-bullet {
   color: var(--md-primary-color);
-  margin-right: 0.5em;
-  font-size: 0.8em;
 }
 
 /* ==================== 分隔线 ==================== */
@@ -1334,6 +1331,7 @@ img {
 /* ==================== 列表 ==================== */
 ul {
   list-style: none;
+  padding-left: 0;
 }
 
 ol {
@@ -1345,10 +1343,8 @@ li {
   color: #333;
 }
 
-ul li::before {
-  content: '—';
+.li-bullet {
   color: #999;
-  margin-right: 0.8em;
 }
 
 /* ==================== 分隔线 ==================== */
@@ -1441,7 +1437,7 @@ td {
   color: #d1d5db;
 }
 
-.dark ul li::before {
+.dark .li-bullet {
   color: #6b7280;
 }
 
@@ -1633,6 +1629,7 @@ img {
 /* ==================== 列表 ==================== */
 ul {
   list-style: none;
+  padding-left: 0;
 }
 
 ol {
@@ -1644,10 +1641,8 @@ li {
   color: #333;
 }
 
-ul li::before {
-  content: '•';
+.li-bullet {
   color: #c2e2f9;
-  margin-right: 0.5em;
   font-weight: bold;
 }
 
@@ -1742,7 +1737,7 @@ td {
   color: #d1d5db;
 }
 
-.dark ul li::before {
+.dark .li-bullet {
   color: rgba(194, 226, 249, 0.7);
 }
 
@@ -1916,21 +1911,12 @@ ol {
 }
 
 li {
-  margin: 0.6em 0;
-  padding-left: 1.5em;
+  margin: 0.6em 8px;
   color: #2d3748;
-  position: relative;
 }
 
-ul li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.6em;
-  width: 6px;
-  height: 6px;
-  background: linear-gradient(135deg, #f093fb, #f5576c);
-  border-radius: 50%;
+.li-bullet {
+  color: #f093fb;
 }
 
 /* ==================== 分隔线 - 渐变 ==================== */
@@ -2221,22 +2207,12 @@ ol {
 }
 
 li {
-  margin: 0.5em 0;
-  padding-left: 1.5em;
+  margin: 0.5em 8px;
   color: #334155;
-  position: relative;
 }
 
-ul li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.55em;
-  width: 8px;
-  height: 8px;
-  background: linear-gradient(135deg, #3b82f6, #1e3a5f);
-  border-radius: 2px;
-  transform: rotate(45deg);
+.li-bullet {
+  color: #3b82f6;
 }
 
 /* ==================== 分隔线 - 渐变 ==================== */
@@ -2350,8 +2326,8 @@ tr:nth-child(even) td {
   color: #cbd5e1;
 }
 
-.dark ul li::before {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+.dark .li-bullet {
+  color: #60a5fa;
 }
 
 .dark blockquote {

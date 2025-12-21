@@ -122,6 +122,108 @@ function mergeCss(html: string): string {
 }
 
 /**
+ * Transform ul/ol lists to section-based structure for WeChat compatibility
+ * WeChat reconstructs ul/li tags and strips styles, so we use section tags instead
+ */
+function transformListsForWeChat(container: HTMLElement): void {
+  // Process all ul and ol elements
+  container.querySelectorAll('ul, ol').forEach((list) => {
+    const isOrdered = list.tagName.toLowerCase() === 'ol'
+    const listStyle = list.getAttribute('style') || ''
+
+    // Create a wrapper section for the list
+    const listWrapper = document.createElement('section')
+    listWrapper.setAttribute('style', `${listStyle}; padding-left: 0; list-style: none;`)
+
+    // Process each li element
+    const items = list.querySelectorAll(':scope > li')
+    items.forEach((li, index) => {
+      const itemSection = document.createElement('section')
+      const liStyle = li.getAttribute('style') || ''
+
+      // Get the bullet/number from existing content or create default
+      const bulletSpan = li.querySelector('.li-bullet') as HTMLElement | null
+      let bulletHtml = ''
+      if (bulletSpan) {
+        // Preserve the bullet span with its inline styles (including color)
+        const bulletStyle = bulletSpan.getAttribute('style') || ''
+        const bulletText = bulletSpan.textContent || '• '
+        bulletHtml = `<span style="${bulletStyle}">${bulletText}</span>`
+        bulletSpan.remove()
+      }
+      else if (isOrdered) {
+        bulletHtml = `${index + 1}. `
+      }
+      else {
+        bulletHtml = '• '
+      }
+
+      // Create inline style that WeChat won't strip
+      // Use padding instead of margin (WeChat often strips margin)
+      itemSection.setAttribute('style', `${liStyle}; display: block; padding-left: 2em; text-indent: -1em; margin-bottom: 0.5em;`)
+      itemSection.innerHTML = bulletHtml + li.innerHTML
+
+      listWrapper.appendChild(itemSection)
+    })
+
+    // Replace the original list with the section-based structure
+    list.parentNode?.replaceChild(listWrapper, list)
+  })
+}
+
+/**
+ * Ensure table styles are properly inlined for WeChat compatibility
+ * WeChat may strip table styles, so we need to ensure critical styles are inline
+ */
+function ensureTableStyles(container: HTMLElement): void {
+  container.querySelectorAll('table').forEach((table) => {
+    const tableStyle = table.getAttribute('style') || ''
+    // Ensure table has essential styles
+    if (!tableStyle.includes('border-collapse')) {
+      table.setAttribute('style', `${tableStyle}; border-collapse: collapse; width: 100%;`)
+    }
+
+    // Process all th cells
+    table.querySelectorAll('th').forEach((th) => {
+      const thStyle = th.getAttribute('style') || ''
+      let newStyle = thStyle
+      // Ensure th has border and padding if not already set
+      if (!thStyle.includes('border')) {
+        newStyle += '; border: 1px solid #dfdfdf; padding: 0.25em 0.5em'
+      }
+      // Ensure left alignment
+      if (!thStyle.includes('text-align')) {
+        newStyle += '; text-align: left'
+      }
+      th.setAttribute('style', newStyle)
+    })
+
+    // Process all td cells
+    table.querySelectorAll('td').forEach((td) => {
+      const tdStyle = td.getAttribute('style') || ''
+      let newStyle = tdStyle
+      // Ensure td has border and padding if not already set
+      if (!tdStyle.includes('border')) {
+        newStyle += '; border: 1px solid #dfdfdf; padding: 0.25em 0.5em'
+      }
+      // Ensure left alignment
+      if (!tdStyle.includes('text-align')) {
+        newStyle += '; text-align: left'
+      }
+      td.setAttribute('style', newStyle)
+    })
+
+    // Process tr for header row (in case there's no thead)
+    table.querySelectorAll('tr:first-child th, tr:first-child td').forEach((cell) => {
+      const cellStyle = cell.getAttribute('style') || ''
+      if (!cellStyle.includes('font-weight')) {
+        cell.setAttribute('style', `${cellStyle}; font-weight: bold;`)
+      }
+    })
+  })
+}
+
+/**
  * Modify HTML structure for WeChat compatibility
  */
 function modifyHtmlStructure(htmlString: string): string {
@@ -132,6 +234,12 @@ function modifyHtmlStructure(htmlString: string): string {
   tempDiv.querySelectorAll('li > ul, li > ol').forEach((originalItem) => {
     originalItem.parentElement!.insertAdjacentElement('afterend', originalItem)
   })
+
+  // Transform lists to section-based structure for WeChat
+  transformListsForWeChat(tempDiv)
+
+  // Ensure table styles are properly inlined for WeChat
+  ensureTableStyles(tempDiv)
 
   return tempDiv.innerHTML
 }

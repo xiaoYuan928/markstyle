@@ -272,10 +272,11 @@ export function initRenderer(opts: IOpts = {}): RendererAPI {
       // 准备下一个
       listCounters[listCounters.length - 1] = idx + 1
 
-      // 有序列表使用数字前缀，无序列表不添加前缀（由CSS控制）
+      // 有序列表使用数字前缀，无序列表使用圆点符号
+      // 注意：必须在 HTML 中直接包含符号，CSS ::before 在复制时不会被保留
       const prefix = ordered
         ? `${idx}. `
-        : ``
+        : `<span class="li-bullet">• </span>`
 
       // 渲染内容：优先 inline，fallback 去掉 <p> 包裹
       let content: string
@@ -326,12 +327,13 @@ export function initRenderer(opts: IOpts = {}): RendererAPI {
     },
 
     table({ header, rows }: Tokens.Table): string {
-      const headerRow = header
+      const headerCells = header
         .map((cell) => {
           const text = this.parser.parseInline(cell.tokens)
           return styledContent(`th`, text)
         })
         .join(``)
+      const headerRow = styledContent(`tr`, headerCells)
       const body = rows
         .map((row) => {
           const rowContent = row

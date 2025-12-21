@@ -77,7 +77,17 @@ function createTurndownService(): TurndownService {
     filter: 'tr',
     replacement: (content, node) => {
       const parent = node.parentNode as Element
-      const isHeader = parent?.nodeName === 'THEAD'
+      const grandParent = parent?.parentNode as Element
+      const isInThead = parent?.nodeName === 'THEAD'
+
+      // Check if this is the first row of a table without thead (Feishu style)
+      // In this case, treat the first row as header
+      const isFirstRowInTable = !isInThead
+        && (parent?.nodeName === 'TBODY' || parent?.nodeName === 'TABLE')
+        && Array.from(parent?.children || []).indexOf(node as Element) === 0
+        && !grandParent?.querySelector('thead')
+
+      const isHeader = isInThead || isFirstRowInTable
       const cells = content.trim()
 
       if (isHeader) {
@@ -248,42 +258,58 @@ function removeDuplicateContent(markdown: string): string {
     const firstRealImageIndex = markdown.indexOf(firstRealImageMatch[0])
 
     // Make sure the placeholder appears BEFORE the real image
-    const placeholderIndex = markdown.indexOf('[图片]')
+    const placeholderIndex = Math.min(
+      markdown.indexOf('[图片]') >= 0 ? markdown.indexOf('[图片]') : Infinity,
+      markdown.indexOf('【图片】') >= 0 ? markdown.indexOf('【图片】') : Infinity,
+    )
 
     if (placeholderIndex < firstRealImageIndex && firstRealImageIndex > 200) {
-      // Remove everything before the first real image
-      return markdown.substring(firstRealImageIndex).trim()
+      // Find a good starting point - look for the beginning of a paragraph or heading before the image
+      const contentFromImage = markdown.substring(firstRealImageIndex)
+
+      // Look backwards from the image to find paragraph/section start
+      const beforeImage = markdown.substring(0, firstRealImageIndex)
+      const lastDoubleNewline = beforeImage.lastIndexOf('\n\n')
+
+      if (lastDoubleNewline > placeholderIndex) {
+        // Start from the paragraph that contains the image
+        return markdown.substring(lastDoubleNewline + 2).trim()
+      }
+
+      return contentFromImage.trim()
     }
   }
 
-  // Alternative: Check for ## heading with its text appearing before as plain text
-  const headingMatch = markdown.match(/^##\s+(.+)$/m)
+  // Only remove duplicate if we have STRONG evidence of Feishu-style duplication:
+  // The exact same heading text must appear twice - once as plain text, once as ## heading
+  const headingMatches = markdown.matchAll(/^(#{1,6})\s+(.+)$/gm)
 
-  if (headingMatch) {
-    const headingIndex = markdown.indexOf(headingMatch[0])
+  for (const match of headingMatches) {
+    const fullHeadingMatch = match[0]
+    const headingText = match[2].trim()
+    const headingIndex = markdown.indexOf(fullHeadingMatch)
     const beforeHeading = markdown.substring(0, headingIndex)
-    let headingText = headingMatch[1].trim()
 
-    // Remove common prefixes like ◆, ●, ■ for comparison
-    const coreHeadingText = headingText.replace(/^[◆●■◇○□▪▫►▶→·•\s]+/, '').trim()
+    // Only consider this a duplicate if:
+    // 1. The EXACT heading text appears as a standalone line before the heading
+    // 2. AND there's a [图片] placeholder in the beforeHeading section
+    const headingAsPlainTextPattern = new RegExp(`^${escapeRegExp(headingText)}\\s*$`, 'm')
+    const hasPlainTextHeading = headingAsPlainTextPattern.test(beforeHeading)
+    const hasPlaceholderBefore = beforeHeading.includes('[图片]') || beforeHeading.includes('【图片】')
 
-    // If the core heading text appears as plain text before the heading, it's a duplicate
-    if (beforeHeading.length > 300 && coreHeadingText && beforeHeading.includes(coreHeadingText)) {
-      return markdown.substring(headingIndex).trim()
-    }
-
-    // Alternative check: if beforeHeading is mostly plain text (few markdown markers)
-    // and is quite long, it's likely duplicate content
-    const markdownMarkers = (beforeHeading.match(/[#*_`\[\]!]/g) || []).length
-    const markerDensity = markdownMarkers / beforeHeading.length
-
-    // If very low markdown marker density (< 2%) and content is long (> 300 chars), it's probably plain text dump
-    if (beforeHeading.length > 300 && markerDensity < 0.02) {
+    if (hasPlainTextHeading && hasPlaceholderBefore) {
       return markdown.substring(headingIndex).trim()
     }
   }
 
   return markdown
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 /**
