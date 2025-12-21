@@ -1,4 +1,6 @@
 export { useEditorStore } from './editor'
+export { useImageHostStore } from './imageHost'
+export type { GitHubConfig } from './imageHost'
 export { usePostStore } from './post'
 export type { Post } from './post'
 export { useRenderStore } from './render'

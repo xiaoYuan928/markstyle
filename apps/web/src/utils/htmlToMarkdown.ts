@@ -36,6 +36,20 @@ function createTurndownService(): TurndownService {
     },
   })
 
+  // Handle Notion attachment images (internal protocol, not accessible externally)
+  turndownService.addRule('notionAttachment', {
+    filter: (node) => {
+      if (node.nodeName !== 'IMG') return false
+      const src = node.getAttribute('src') || ''
+      return src.startsWith('attachment:')
+    },
+    replacement: (_content, node) => {
+      const alt = (node as HTMLImageElement).alt || 'image'
+      // 转换为提示块，告知用户需要手动上传
+      return `\n\n> **[图片需要手动上传]** ${alt}\n\n`
+    },
+  })
+
   // Handle code blocks with language
   turndownService.addRule('codeBlock', {
     filter: (node) => {
@@ -381,6 +395,20 @@ export function looksLikeMarkdown(text: string): boolean {
 }
 
 /**
+ * Replace Notion attachment: protocol images with placeholder
+ */
+function replaceNotionAttachments(text: string): string {
+  // Match ![alt](attachment:...) pattern
+  return text.replace(
+    /!\[([^\]]*)\]\(attachment:[^)]+\)/g,
+    (_match, alt) => {
+      const imageName = alt || 'image'
+      return `\n> **[图片需要手动上传]** ${imageName}\n`
+    },
+  )
+}
+
+/**
  * Handle paste event and convert HTML to Markdown if needed
  */
 export function handlePasteContent(clipboardData: DataTransfer): string | null {
@@ -393,7 +421,12 @@ export function handlePasteContent(clipboardData: DataTransfer): string | null {
   }
 
   // If the plain text already looks like Markdown, use it directly
+  // But still process Notion attachment images
   if (plainText && looksLikeMarkdown(plainText)) {
+    // Check if contains Notion attachment images
+    if (plainText.includes('attachment:')) {
+      return replaceNotionAttachments(plainText)
+    }
     return null
   }
 

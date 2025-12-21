@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { ImageUploadDialog } from '@/components/editor/ImageUploadDialog'
 import { useEditorStore, usePostStore } from '@/stores'
 
 /**
@@ -38,6 +39,23 @@ export function Toolbar() {
   const editor = useEditorStore(state => state.editor)
   const currentPost = usePostStore(state => state.posts.find(p => p.id === state.currentPostId))
   const [savedTimeText, setSavedTimeText] = useState('')
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
+
+  // 图片上传成功后插入到编辑器
+  const handleUploadSuccess = (url: string) => {
+    if (!editor) return
+    const { from } = editor.state.selection.main
+    const imageMarkdown = `![](${url})`
+    editor.dispatch({
+      changes: {
+        from,
+        to: from,
+        insert: imageMarkdown,
+      },
+      selection: { anchor: from + imageMarkdown.length },
+    })
+    editor.focus()
+  }
 
   // 更新保存时间显示（每10秒更新一次）
   useEffect(() => {
@@ -183,7 +201,7 @@ export function Toolbar() {
     'divider',
     { icon: 'format_list_bulleted', title: 'List', action: () => insertAtLineStart('- ') },
     { icon: 'link', title: 'Link', action: () => insertText('[', '](url)') },
-    { icon: 'image', title: 'Image', action: () => insertText('![alt](', ')') },
+    { icon: 'image', title: '上传图片', action: () => setIsUploadOpen(true) },
     'divider',
     { icon: 'hide_image', title: '去除图片注释', action: removeImageCaptions },
   ]
@@ -211,6 +229,13 @@ export function Toolbar() {
       {savedTimeText && (
         <div className="text-xs text-gray-400 font-medium">{savedTimeText}</div>
       )}
+
+      {/* 图片上传对话框 */}
+      <ImageUploadDialog
+        open={isUploadOpen}
+        onOpenChange={setIsUploadOpen}
+        onUploadSuccess={handleUploadSuccess}
+      />
     </div>
   )
 }

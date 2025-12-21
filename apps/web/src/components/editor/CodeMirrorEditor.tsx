@@ -6,8 +6,10 @@ import { bracketMatching } from '@codemirror/language'
 import { EditorState } from '@codemirror/state'
 import { EditorView, highlightActiveLine, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view'
 import { useCallback, useEffect, useRef } from 'react'
-import { useEditorStore, usePostStore, useRenderStore, useUIStore } from '@/stores'
+import { toast } from 'sonner'
+import { useEditorStore, useImageHostStore, usePostStore, useRenderStore, useUIStore } from '@/stores'
 import { handlePasteContent } from '@/utils/htmlToMarkdown'
+import { isValidImageFile, uploadToGitHub } from '@/utils/imageUpload'
 
 // Editor theme
 const editorTheme = EditorView.theme({
@@ -57,8 +59,75 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
   const updateCurrentPostContent = usePostStore(state => state.updateCurrentPostContent)
   const render = useRenderStore(state => state.render)
   const { syncScroll, scrollSource, scrollPercent, setScrollState } = useUIStore()
+  const { githubConfig, isConfigured } = useImageHostStore()
 
   const post = currentPost()
+
+  // Upload image and insert markdown at cursor position
+  const uploadImageAndInsert = useCallback(async (file: File) => {
+    const editor = editorRef.current
+    if (!editor) return
+
+    if (!isConfigured()) {
+      toast.error('请先配置 GitHub 图床（点击工具栏图片按钮）')
+      return
+    }
+
+    if (!isValidImageFile(file)) {
+      toast.error('请选择有效的图片文件 (JPEG, PNG, GIF, WebP, SVG)')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('图片大小不能超过 10MB')
+      return
+    }
+
+    // Insert placeholder at cursor position
+    const { from } = editor.state.selection.main
+    const placeholder = `![上传中...]()`
+    editor.dispatch({
+      changes: { from, to: from, insert: placeholder },
+      selection: { anchor: from + placeholder.length },
+    })
+
+    try {
+      const url = await uploadToGitHub(file, githubConfig)
+
+      // Replace placeholder with actual image markdown
+      const currentContent = editor.state.doc.toString()
+      const placeholderIndex = currentContent.indexOf(placeholder)
+
+      if (placeholderIndex !== -1) {
+        const imageMarkdown = `![](${url})`
+        editor.dispatch({
+          changes: {
+            from: placeholderIndex,
+            to: placeholderIndex + placeholder.length,
+            insert: imageMarkdown,
+          },
+        })
+        toast.success('图片上传成功')
+      }
+    }
+    catch (error) {
+      // Remove placeholder on error
+      const currentContent = editor.state.doc.toString()
+      const placeholderIndex = currentContent.indexOf(placeholder)
+
+      if (placeholderIndex !== -1) {
+        editor.dispatch({
+          changes: {
+            from: placeholderIndex,
+            to: placeholderIndex + placeholder.length,
+            insert: '',
+          },
+        })
+      }
+
+      toast.error(error instanceof Error ? error.message : '上传失败')
+    }
+  }, [githubConfig, isConfigured])
 
   const handleChange = useCallback((content: string) => {
     updateCurrentPostContent(content)
@@ -94,12 +163,25 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
     })
   }, [syncScroll, setScrollState])
 
-  // Handle paste event for HTML to Markdown conversion
+  // Handle paste event for images and HTML to Markdown conversion
   const handlePaste = useCallback((event: ClipboardEvent) => {
     const editor = editorRef.current
     if (!editor || !event.clipboardData)
       return
 
+    // Check for clipboard image first (screenshots, copied images)
+    const files = event.clipboardData.files
+    if (files.length > 0) {
+      const imageFile = Array.from(files).find(f => f.type.startsWith('image/'))
+      if (imageFile) {
+        event.preventDefault()
+        event.stopPropagation()
+        uploadImageAndInsert(imageFile)
+        return
+      }
+    }
+
+    // Otherwise, handle HTML to Markdown conversion
     const markdown = handlePasteContent(event.clipboardData)
 
     // If we got converted Markdown, insert it and prevent default paste
@@ -113,7 +195,41 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
         selection: { anchor: from + markdown.length },
       })
     }
+  }, [uploadImageAndInsert])
+
+  // Handle drag over to allow drop and show cursor position
+  const handleDragOver = useCallback((event: DragEvent) => {
+    // Check if dragging files that include images
+    if (event.dataTransfer?.types.includes('Files')) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'copy'
+
+      // Move cursor to drop position for visual feedback
+      const editor = editorRef.current
+      if (editor) {
+        const pos = editor.posAtCoords({ x: event.clientX, y: event.clientY })
+        if (pos !== null) {
+          editor.dispatch({
+            selection: { anchor: pos },
+          })
+          editor.focus()
+        }
+      }
+    }
   }, [])
+
+  // Handle drop for image upload
+  const handleDrop = useCallback((event: DragEvent) => {
+    const files = event.dataTransfer?.files
+    if (!files || files.length === 0) return
+
+    const imageFile = Array.from(files).find(f => f.type.startsWith('image/'))
+    if (imageFile) {
+      event.preventDefault()
+      event.stopPropagation()
+      uploadImageAndInsert(imageFile)
+    }
+  }, [uploadImageAndInsert])
 
   useEffect(() => {
     if (!containerRef.current)
@@ -155,6 +271,10 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
     const container = containerRef.current
     container.addEventListener('paste', handlePaste, true)
 
+    // Add drag and drop event listeners for image upload
+    container.addEventListener('dragover', handleDragOver)
+    container.addEventListener('drop', handleDrop)
+
     // Add scroll event listener for sync scrolling
     view.scrollDOM.addEventListener('scroll', handleScroll)
 
@@ -165,6 +285,8 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
 
     return () => {
       container.removeEventListener('paste', handlePaste, true)
+      container.removeEventListener('dragover', handleDragOver)
+      container.removeEventListener('drop', handleDrop)
       view.scrollDOM.removeEventListener('scroll', handleScroll)
       view.destroy()
       editorRef.current = null
