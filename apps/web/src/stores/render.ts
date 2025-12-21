@@ -14,6 +14,7 @@ interface RenderState {
   headings: Heading[]
   renderer: RendererAPI | null
   rendererOptions: Parameters<typeof initRenderer>[0]
+  lastContent: string // 缓存上次渲染的内容
 
   // Actions
   initializeRenderer: (opts?: Parameters<typeof initRenderer>[0]) => void
@@ -21,6 +22,9 @@ interface RenderState {
   render: (content: string) => void
   getOutput: () => string
 }
+
+// 防抖计时器
+let renderDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const defaultRendererOptions = {
   legend: 'alt-title' as const,
@@ -35,6 +39,7 @@ export const useRenderStore = create<RenderState>((set, get) => ({
   headings: [],
   renderer: null,
   rendererOptions: defaultRendererOptions,
+  lastContent: '',
 
   initializeRenderer: (opts = {}) => {
     const options = { ...defaultRendererOptions, ...opts }
@@ -50,62 +55,83 @@ export const useRenderStore = create<RenderState>((set, get) => ({
   },
 
   render: (content) => {
-    try {
-      const { renderer } = get()
-
-      // Initialize renderer if not already done
-      if (!renderer) {
-        get().initializeRenderer()
-      }
-
-      const currentRenderer = get().renderer
-      if (!currentRenderer) {
-        console.error('Renderer not initialized')
-        return
-      }
-
-      // Parse front matter and content
-      const { markdownContent, readingTime: readingTimeResult } = currentRenderer.parseFrontMatterAndContent(content)
-
-      // Reset footnotes for new render
-      currentRenderer.reset({})
-
-      // Render markdown to HTML
-      const html = marked.parse(markdownContent) as string
-
-      // Build additional content
-      const addition = currentRenderer.buildAddition()
-      const readingTimeHtml = currentRenderer.buildReadingTime(readingTimeResult)
-      const footnotes = currentRenderer.buildFootnotes()
-
-      // Wrap in container
-      const containerContent = readingTimeHtml + html + footnotes
-      const wrappedHtml = currentRenderer.createContainer(containerContent)
-      const fullOutput = addition + wrappedHtml
-
-      // Extract headings from rendered HTML
-      const headingRegex = /<h([1-6])[^>]*(?:data-heading="true")?[^>]*>([^<]+)<\/h\1>/g
-      const headings: Heading[] = []
-      let match = headingRegex.exec(fullOutput)
-
-      while (match !== null) {
-        const level = Number.parseInt(match[1], 10)
-        const text = match[2]
-        const id = text
-          .toLowerCase()
-          .replace(/[^\w\u4E00-\u9FA5]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-
-        headings.push({ level, id, text })
-        match = headingRegex.exec(fullOutput)
-      }
-
-      set({ output: fullOutput, headings })
+    // 如果内容没变，不重新渲染
+    const { lastContent } = get()
+    if (content === lastContent) {
+      return
     }
-    catch (error) {
-      console.error('Markdown render error:', error)
-      set({ output: '<p>Render error</p>', headings: [] })
+
+    // 清除之前的防抖计时器
+    if (renderDebounceTimer) {
+      clearTimeout(renderDebounceTimer)
     }
+
+    // 防抖：延迟 50ms 执行渲染，减少频繁更新
+    renderDebounceTimer = setTimeout(() => {
+      try {
+        const { renderer } = get()
+
+        // Initialize renderer if not already done
+        if (!renderer) {
+          get().initializeRenderer()
+        }
+
+        const currentRenderer = get().renderer
+        if (!currentRenderer) {
+          console.error('Renderer not initialized')
+          return
+        }
+
+        // Parse front matter and content
+        const { markdownContent, readingTime: readingTimeResult } = currentRenderer.parseFrontMatterAndContent(content)
+
+        // Reset footnotes for new render
+        currentRenderer.reset({})
+
+        // Render markdown to HTML
+        const html = marked.parse(markdownContent) as string
+
+        // Build additional content
+        const addition = currentRenderer.buildAddition()
+        const readingTimeHtml = currentRenderer.buildReadingTime(readingTimeResult)
+        const footnotes = currentRenderer.buildFootnotes()
+
+        // Wrap in container
+        const containerContent = readingTimeHtml + html + footnotes
+        const wrappedHtml = currentRenderer.createContainer(containerContent)
+        const fullOutput = addition + wrappedHtml
+
+        // 只有输出真正改变时才更新状态
+        const currentOutput = get().output
+        if (fullOutput === currentOutput) {
+          set({ lastContent: content })
+          return
+        }
+
+        // Extract headings from rendered HTML
+        const headingRegex = /<h([1-6])[^>]*(?:data-heading="true")?[^>]*>([^<]+)<\/h\1>/g
+        const headings: Heading[] = []
+        let match = headingRegex.exec(fullOutput)
+
+        while (match !== null) {
+          const level = Number.parseInt(match[1], 10)
+          const text = match[2]
+          const id = text
+            .toLowerCase()
+            .replace(/[^\w\u4E00-\u9FA5]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+
+          headings.push({ level, id, text })
+          match = headingRegex.exec(fullOutput)
+        }
+
+        set({ output: fullOutput, headings, lastContent: content })
+      }
+      catch (error) {
+        console.error('Markdown render error:', error)
+        set({ output: '<p>Render error</p>', headings: [], lastContent: content })
+      }
+    }, 50)
   },
 
   getOutput: () => get().output,

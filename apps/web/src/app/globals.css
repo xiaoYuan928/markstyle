@@ -145,3 +145,49 @@
     'GRAD' 0,
     'opsz' 24;
 }
+
+/* Preview image loading optimization */
+#output img {
+  min-height: 100px;
+  background: linear-gradient(135deg, #f5f5f5 25%, #ebebeb 25%, #ebebeb 50%, #f5f5f5 50%, #f5f5f5 75%, #ebebeb 75%);
+  background-size: 20px 20px;
+  /* 防止图片闪烁 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+#output img[src] {
+  background: none;
+}
+
+/* 图片容器优化 */
+#output figure {
+  contain: layout style;
+  content-visibility: auto;
+}
+
+/* Broken image placeholder */
+#output img:not([src]),
+#output img[src=""],
+#output img:-moz-broken {
+  min-height: 100px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dark #output img {
+  background: linear-gradient(135deg, #374151 25%, #4b5563 25%, #4b5563 50%, #374151 50%, #374151 75%, #4b5563 75%);
+  background-size: 20px 20px;
+}
+
+.dark #output img[src] {
+  background: none;
+}
+
+.dark #output img:not([src]),
+.dark #output img[src=""],
+.dark #output img:-moz-broken {
+  background: #374151;
+}

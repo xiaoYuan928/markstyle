@@ -50,6 +50,7 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<EditorView | null>(null)
   const isScrollingRef = useRef(false)
+  const scrollThrottleRef = useRef<number | null>(null)
 
   const setEditor = useEditorStore(state => state.setEditor)
   const currentPost = usePostStore(state => state.currentPost)
@@ -64,22 +65,33 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
     render(content)
   }, [updateCurrentPostContent, render])
 
-  // Handle scroll event for sync scrolling
+  // Handle scroll event for sync scrolling with throttling
   const handleScroll = useCallback(() => {
     if (!syncScroll || isScrollingRef.current)
       return
 
-    const editor = editorRef.current
-    if (!editor)
+    // Throttle scroll updates to reduce flickering
+    if (scrollThrottleRef.current !== null)
       return
 
-    const scrollDOM = editor.scrollDOM
-    const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight
-    if (scrollHeight <= 0)
-      return
+    scrollThrottleRef.current = window.requestAnimationFrame(() => {
+      const editor = editorRef.current
+      if (!editor) {
+        scrollThrottleRef.current = null
+        return
+      }
 
-    const percent = scrollDOM.scrollTop / scrollHeight
-    setScrollState('editor', percent)
+      const scrollDOM = editor.scrollDOM
+      const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight
+      if (scrollHeight <= 0) {
+        scrollThrottleRef.current = null
+        return
+      }
+
+      const percent = scrollDOM.scrollTop / scrollHeight
+      setScrollState('editor', percent)
+      scrollThrottleRef.current = null
+    })
   }, [syncScroll, setScrollState])
 
   // Handle paste event for HTML to Markdown conversion
@@ -93,6 +105,7 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
     // If we got converted Markdown, insert it and prevent default paste
     if (markdown) {
       event.preventDefault()
+      event.stopPropagation() // Also stop propagation to prevent CodeMirror handling
 
       const { from, to } = editor.state.selection.main
       editor.dispatch({
@@ -138,8 +151,9 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
     setEditor(view)
 
     // Add paste event listener for HTML to Markdown conversion
+    // Use capture phase to intercept paste before CodeMirror's internal handler
     const container = containerRef.current
-    container.addEventListener('paste', handlePaste)
+    container.addEventListener('paste', handlePaste, true)
 
     // Add scroll event listener for sync scrolling
     view.scrollDOM.addEventListener('scroll', handleScroll)
@@ -150,7 +164,7 @@ export function CodeMirrorEditor({ className = '' }: CodeMirrorEditorProps) {
     }
 
     return () => {
-      container.removeEventListener('paste', handlePaste)
+      container.removeEventListener('paste', handlePaste, true)
       view.scrollDOM.removeEventListener('scroll', handleScroll)
       view.destroy()
       editorRef.current = null
