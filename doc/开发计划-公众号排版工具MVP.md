@@ -380,6 +380,13 @@ apps/web-vue-backup/src/
   - [x] 12.2 配置 .gitignore
   - [x] 12.3 部署到 Vercel
   - [x] 12.4 配置自定义域名 markstyle.org
+- [x] Phase 13: AI 生成公众号封面
+  - [x] 13.1 集成 EvoLink Z-Image-Turbo API 生成图片
+  - [x] 13.2 使用 OpenRouter GPT-4o-mini 分析文章生成描述
+  - [x] 13.3 两步流程：AI 分析 → 生成描述 → 用户编辑 → 生成图片
+  - [x] 13.4 支持 5 种尺寸预设（公众号头条/次条、16:9、1:1、3:4）
+  - [x] 13.5 支持复制图片到剪贴板、下载、上传图床
+  - [x] 13.6 弹窗支持滚动，scrollbar-gutter 防抖动
 
 ### 更新记录
 
@@ -399,6 +406,7 @@ apps/web-vue-backup/src/
 | 2025-12-19 | 完成 Phase 10 UI 细节优化（字体、自动收缩、h2修复、去除图片注释） |
 | 2025-12-20 | 完成 Phase 11 主题系统扩展（新增 7 个主题：墨韵、霓虹、手账、极简黑、渐变、多彩、科技蓝） |
 | 2025-12-20 | 完成 Phase 12 品牌与部署（favicon、Vercel 部署、域名配置） |
+| 2025-12-22 | 完成 Phase 13 AI 生成公众号封面（EvoLink + OpenRouter，多尺寸支持） |
 
 ---
 
