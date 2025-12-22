@@ -41,6 +41,7 @@
     "marked": "catalog:",
     "next": "catalog:",
     "next-themes": "catalog:",
+    "openai": "catalog:",
     "postcss": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

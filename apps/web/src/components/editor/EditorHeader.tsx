@@ -5,6 +5,7 @@ import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { CoverGeneratorDialog } from '@/components/editor/CoverGeneratorDialog'
 import { useEditorStore, usePostStore, useThemeStore } from '@/stores'
 import { copyToWeChat } from '@/utils/clipboard'
 
@@ -14,6 +15,7 @@ export function EditorHeader() {
   const getContent = useEditorStore(state => state.getContent)
   const primaryColor = useThemeStore(state => state.primaryColor)
   const [isCopying, setIsCopying] = useState(false)
+  const [showCoverDialog, setShowCoverDialog] = useState(false)
 
   const handleExport = () => {
     const content = getContent()
@@ -55,6 +57,16 @@ export function EditorHeader() {
 
       {/* Right: Actions */}
       <div className="flex items-center space-x-2">
+        {/* Generate Cover Button */}
+        <button
+          onClick={() => setShowCoverDialog(true)}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors text-sm font-medium"
+          title="AI 生成公众号封面"
+        >
+          <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+          <span className="hidden sm:inline">生成封面</span>
+        </button>
+
         {/* Copy to WeChat Button - Primary Action */}
         <button
           onClick={handleCopyToWeChat}
@@ -87,6 +99,12 @@ export function EditorHeader() {
           <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 -mt-5" />
         </button>
       </div>
+
+      {/* Cover Generator Dialog */}
+      <CoverGeneratorDialog
+        open={showCoverDialog}
+        onOpenChange={setShowCoverDialog}
+      />
     </header>
   )
 }
