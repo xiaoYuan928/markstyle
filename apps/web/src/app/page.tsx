@@ -2,12 +2,23 @@
 
 import type { ThemeName } from '@md/shared/configs'
 import { useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Editor } from '@/components/editor/Editor'
 import { usePostStore } from '@/stores'
 import { useThemeStore } from '@/stores/theme'
 
-export default function EditorPage() {
+function LoadingSpinner() {
+  return (
+    <div className="h-screen flex items-center justify-center bg-surface">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <span className="text-sm text-gray-500">Loading...</span>
+      </div>
+    </div>
+  )
+}
+
+function EditorPageContent() {
   const initialize = usePostStore(state => state.initialize)
   const isInitialized = usePostStore(state => state.isInitialized)
   const isLoading = usePostStore(state => state.isLoading)
@@ -29,15 +40,16 @@ export default function EditorPage() {
 
   // Show loading state
   if (!isInitialized || isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-surface">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          <span className="text-sm text-gray-500">Loading...</span>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return <Editor />
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <EditorPageContent />
+    </Suspense>
+  )
 }
