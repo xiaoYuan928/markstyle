@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ThemeProvider } from 'next-themes'
 import { JetBrains_Mono, Noto_Sans_SC } from 'next/font/google'
 import { Toaster } from 'sonner'
+import { AuthProvider } from '@/components/auth'
 import './globals.css'
 
 const notoSansSC = Noto_Sans_SC({
@@ -58,10 +59,12 @@ export default function RootLayout({
         />
       </head>
       <body className={`${notoSansSC.variable} ${jetbrainsMono.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )

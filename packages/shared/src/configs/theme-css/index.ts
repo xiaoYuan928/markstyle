@@ -321,19 +321,18 @@ ol {
   padding-left: 0;
   margin-left: 8px;
   color: #3f3f3f;
-  list-style-position: inside;
+  list-style: none;
 }
 
 ul {
-  list-style-type: circle;
-  list-style-position: inside;
+  list-style: none;
   padding-left: 0;
   margin-left: 8px;
   color: #3f3f3f;
 }
 
 li {
-  display: list-item;
+  display: block;
   margin: 0.4em 0;
   color: #3f3f3f;
 }

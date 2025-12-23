@@ -96,6 +96,7 @@ figcaption,
 
 /* ==================== 列表 ==================== */
 ol {
+  list-style: none;
   padding-left: 1.5em;
 }
 
@@ -105,6 +106,7 @@ ul {
 }
 
 li {
+  display: block;
   margin: 0.5em 8px;
 }
 

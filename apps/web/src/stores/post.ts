@@ -1,5 +1,8 @@
-import { type Document, documentsAPI, migrateFromLocalStorage } from '@/lib/db'
+import type { CloudDocument } from '@/lib/cloudDocuments'
+import type { Document } from '@/lib/db'
 import { create } from 'zustand'
+import { cloudDocumentsAPI } from '@/lib/cloudDocuments'
+import { documentsAPI, migrateFromLocalStorage } from '@/lib/db'
 
 export interface Post {
   id: string
@@ -9,6 +12,8 @@ export interface Post {
   updateDatetime: string
 }
 
+type SyncMode = 'local' | 'cloud'
+
 interface PostState {
   posts: Post[]
   deletedPosts: Post[]
@@ -16,6 +21,7 @@ interface PostState {
   isLoading: boolean
   isInitialized: boolean
   showTrash: boolean
+  syncMode: SyncMode
 
   // Computed
   currentPost: () => Post | undefined
@@ -33,6 +39,12 @@ interface PostState {
   updateCurrentPostContent: (content: string) => void
   importMarkdownFiles: (files: File[]) => Promise<number>
   refreshDeletedPosts: () => Promise<void>
+
+  // Cloud sync actions
+  switchToCloud: () => Promise<void>
+  switchToLocal: () => Promise<void>
+  migrateToCloud: () => Promise<{ created: number, updated: number, skipped: number }>
+  refreshFromCloud: () => Promise<void>
 }
 
 const DEFAULT_CONTENT = `# 欢迎使用 MarkStyle
@@ -74,6 +86,19 @@ function documentToPost(doc: Document): Post {
   }
 }
 
+/**
+ * 将 CloudDocument 转换为 Post
+ */
+function cloudDocumentToPost(doc: CloudDocument): Post {
+  return {
+    id: doc.id,
+    title: doc.title,
+    content: doc.content,
+    createDatetime: doc.createdAt.toISOString(),
+    updateDatetime: doc.updatedAt.toISOString(),
+  }
+}
+
 // 防抖保存，避免频繁写入 IndexedDB
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 const SAVE_DEBOUNCE_MS = 500
@@ -85,6 +110,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
   isLoading: false,
   isInitialized: false,
   showTrash: false,
+  syncMode: 'local' as SyncMode,
 
   currentPost: () => {
     const { posts, currentPostId } = get()
@@ -92,7 +118,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   initialize: async () => {
-    if (get().isInitialized) return
+    if (get().isInitialized)
+      return
 
     set({ isLoading: true })
 
@@ -135,8 +162,18 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   createPost: async (title = '未命名文档', content = '') => {
-    const doc = await documentsAPI.create(title, content)
-    const post = documentToPost(doc)
+    const { syncMode } = get()
+
+    let post: Post
+
+    if (syncMode === 'cloud') {
+      const doc = await cloudDocumentsAPI.create(title, content)
+      post = cloudDocumentToPost(doc)
+    }
+    else {
+      const doc = await documentsAPI.create(title, content)
+      post = documentToPost(doc)
+    }
 
     set(state => ({
       posts: [post, ...state.posts],
@@ -148,6 +185,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   updatePost: async (id, updates) => {
+    const { syncMode } = get()
+
     // 立即更新内存状态
     set(state => ({
       posts: state.posts.map(p =>
@@ -157,13 +196,18 @@ export const usePostStore = create<PostState>()((set, get) => ({
       ),
     }))
 
-    // 防抖保存到 IndexedDB
+    // 防抖保存
     if (saveTimeout) {
       clearTimeout(saveTimeout)
     }
     saveTimeout = setTimeout(async () => {
       try {
-        await documentsAPI.update(id, updates)
+        if (syncMode === 'cloud') {
+          await cloudDocumentsAPI.update(id, updates)
+        }
+        else {
+          await documentsAPI.update(id, updates)
+        }
       }
       catch (error) {
         console.error('Failed to save post:', error)
@@ -172,6 +216,8 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   deletePost: async (id) => {
+    const { syncMode } = get()
+
     // 立即更新内存状态
     set((state) => {
       const newPosts = state.posts.filter(p => p.id !== id)
@@ -187,9 +233,14 @@ export const usePostStore = create<PostState>()((set, get) => ({
       return { posts: newPosts, currentPostId: newCurrentId }
     })
 
-    // 从 IndexedDB 删除（软删除）
+    // 软删除
     try {
-      await documentsAPI.softDelete(id)
+      if (syncMode === 'cloud') {
+        await cloudDocumentsAPI.softDelete(id)
+      }
+      else {
+        await documentsAPI.softDelete(id)
+      }
     }
     catch (error) {
       console.error('Failed to delete post:', error)
@@ -209,6 +260,7 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   importMarkdownFiles: async (files) => {
+    const { syncMode } = get()
     const imported: Post[] = []
 
     for (const file of files) {
@@ -217,8 +269,16 @@ export const usePostStore = create<PostState>()((set, get) => ({
         // 使用文件名（去掉扩展名）作为标题
         const title = file.name.replace(/\.md$/i, '') || '导入的文档'
 
-        const doc = await documentsAPI.create(title, content)
-        imported.push(documentToPost(doc))
+        let post: Post
+        if (syncMode === 'cloud') {
+          const doc = await cloudDocumentsAPI.create(title, content)
+          post = cloudDocumentToPost(doc)
+        }
+        else {
+          const doc = await documentsAPI.create(title, content)
+          post = documentToPost(doc)
+        }
+        imported.push(post)
       }
       catch (error) {
         console.error(`Failed to import file ${file.name}:`, error)
@@ -245,9 +305,17 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   refreshDeletedPosts: async () => {
+    const { syncMode } = get()
     try {
-      const docs = await documentsAPI.getDeleted()
-      const posts = docs.map(documentToPost)
+      let posts: Post[]
+      if (syncMode === 'cloud') {
+        const docs = await cloudDocumentsAPI.getDeleted()
+        posts = docs.map(cloudDocumentToPost)
+      }
+      else {
+        const docs = await documentsAPI.getDeleted()
+        posts = docs.map(documentToPost)
+      }
       set({ deletedPosts: posts })
     }
     catch (error) {
@@ -256,15 +324,29 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   restorePost: async (id) => {
+    const { syncMode } = get()
     try {
-      await documentsAPI.restore(id)
-      const doc = await documentsAPI.getById(id)
-      if (doc) {
-        const post = documentToPost(doc)
-        set(state => ({
-          posts: [post, ...state.posts],
-          deletedPosts: state.deletedPosts.filter(p => p.id !== id),
-        }))
+      if (syncMode === 'cloud') {
+        await cloudDocumentsAPI.restore(id)
+        const doc = await cloudDocumentsAPI.getById(id)
+        if (doc) {
+          const post = cloudDocumentToPost(doc)
+          set(state => ({
+            posts: [post, ...state.posts],
+            deletedPosts: state.deletedPosts.filter(p => p.id !== id),
+          }))
+        }
+      }
+      else {
+        await documentsAPI.restore(id)
+        const doc = await documentsAPI.getById(id)
+        if (doc) {
+          const post = documentToPost(doc)
+          set(state => ({
+            posts: [post, ...state.posts],
+            deletedPosts: state.deletedPosts.filter(p => p.id !== id),
+          }))
+        }
       }
     }
     catch (error) {
@@ -273,8 +355,14 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   permanentlyDeletePost: async (id) => {
+    const { syncMode } = get()
     try {
-      await documentsAPI.hardDelete(id)
+      if (syncMode === 'cloud') {
+        await cloudDocumentsAPI.hardDelete(id)
+      }
+      else {
+        await documentsAPI.hardDelete(id)
+      }
       set(state => ({
         deletedPosts: state.deletedPosts.filter(p => p.id !== id),
       }))
@@ -285,12 +373,149 @@ export const usePostStore = create<PostState>()((set, get) => ({
   },
 
   emptyTrash: async () => {
+    const { syncMode } = get()
     try {
-      await documentsAPI.emptyTrash()
+      if (syncMode === 'cloud') {
+        await cloudDocumentsAPI.emptyTrash()
+      }
+      else {
+        await documentsAPI.emptyTrash()
+      }
       set({ deletedPosts: [] })
     }
     catch (error) {
       console.error('Failed to empty trash:', error)
+    }
+  },
+
+  // ========== Cloud Sync Actions ==========
+
+  /**
+   * 切换到云端模式（用户登录后调用）
+   */
+  switchToCloud: async () => {
+    set({ isLoading: true, syncMode: 'cloud' })
+
+    try {
+      const docs = await cloudDocumentsAPI.getAll()
+      const posts = docs.map(cloudDocumentToPost)
+
+      // 如果云端没有文档，创建一个默认文档
+      if (posts.length === 0) {
+        const newDoc = await cloudDocumentsAPI.create('欢迎使用 MarkStyle', DEFAULT_CONTENT)
+        const newPost = cloudDocumentToPost(newDoc)
+        set({
+          posts: [newPost],
+          currentPostId: newPost.id,
+          isLoading: false,
+        })
+        return
+      }
+
+      // 恢复上次选中的文档
+      const lastPostId = localStorage.getItem('markstyle-last-post-id')
+      const currentPostId = posts.find(p => p.id === lastPostId)?.id || posts[0]?.id || null
+
+      set({
+        posts,
+        currentPostId,
+        isLoading: false,
+        deletedPosts: [],
+      })
+    }
+    catch (error) {
+      console.error('Failed to switch to cloud:', error)
+      // 切换失败，回退到本地模式
+      set({ syncMode: 'local', isLoading: false })
+    }
+  },
+
+  /**
+   * 切换到本地模式（用户登出后调用）
+   */
+  switchToLocal: async () => {
+    set({ isLoading: true, syncMode: 'local' })
+
+    try {
+      const docs = await documentsAPI.getAll()
+      const posts = docs.map(documentToPost)
+
+      // 如果没有本地文档，创建一个默认文档
+      if (posts.length === 0) {
+        const newDoc = await documentsAPI.create('欢迎使用 MarkStyle', DEFAULT_CONTENT)
+        const newPost = documentToPost(newDoc)
+        set({
+          posts: [newPost],
+          currentPostId: newPost.id,
+          isLoading: false,
+        })
+        return
+      }
+
+      // 恢复上次选中的文档
+      const lastPostId = localStorage.getItem('markstyle-last-post-id')
+      const currentPostId = posts.find(p => p.id === lastPostId)?.id || posts[0]?.id || null
+
+      set({
+        posts,
+        currentPostId,
+        isLoading: false,
+        deletedPosts: [],
+      })
+    }
+    catch (error) {
+      console.error('Failed to switch to local:', error)
+      set({ isLoading: false })
+    }
+  },
+
+  /**
+   * 将本地文档迁移到云端
+   */
+  migrateToCloud: async () => {
+    // 获取所有本地文档
+    const localDocs = await documentsAPI.getAll()
+
+    if (localDocs.length === 0) {
+      return { created: 0, updated: 0, skipped: 0 }
+    }
+
+    // 转换为同步格式
+    const documents = localDocs.map(doc => ({
+      id: doc.id,
+      title: doc.title,
+      content: doc.content,
+      createdAt: doc.createdAt.toISOString(),
+      updatedAt: doc.updatedAt.toISOString(),
+    }))
+
+    // 调用同步 API
+    const result = await cloudDocumentsAPI.syncFromLocal(documents)
+
+    // 刷新云端文档列表
+    await get().refreshFromCloud()
+
+    return result
+  },
+
+  /**
+   * 刷新云端文档（不切换模式）
+   */
+  refreshFromCloud: async () => {
+    if (get().syncMode !== 'cloud')
+      return
+
+    try {
+      const docs = await cloudDocumentsAPI.getAll()
+      const posts = docs.map(cloudDocumentToPost)
+
+      const { currentPostId } = get()
+      const newCurrentId = posts.find(p => p.id === currentPostId)?.id || posts[0]?.id || null
+
+      set({ posts, currentPostId: newCurrentId })
+    }
+    catch (error) {
+      console.error('Failed to refresh from cloud:', error)
     }
   },
 }))

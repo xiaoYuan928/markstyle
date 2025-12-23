@@ -21,7 +21,7 @@ export function Preview({ className = '' }: PreviewProps) {
   const updateRendererOptions = useRenderStore(state => state.updateRendererOptions)
   const render = useRenderStore(state => state.render)
   const currentPost = usePostStore(state => state.currentPost)
-  const { applyCurrentTheme, primaryColor, fontFamily, fontSize, lineHeight, maxWidth, isShowLineNumber, isMacCodeBlock } = useThemeStore()
+  const { applyCurrentTheme, primaryColor, fontFamily, fontSize, lineHeight, maxWidth, isMacCodeBlock } = useThemeStore()
   const { syncScroll, scrollSource, scrollPercent, setScrollState } = useUIStore()
 
   // Apply theme on mount and when theme settings change
@@ -31,13 +31,13 @@ export function Preview({ className = '' }: PreviewProps) {
 
   // Update renderer options when code block settings change
   useEffect(() => {
-    updateRendererOptions({ isShowLineNumber, isMacCodeBlock })
+    updateRendererOptions({ isMacCodeBlock })
     // Re-render current content with new options
     const post = currentPost()
     if (post?.content) {
       render(post.content)
     }
-  }, [isShowLineNumber, isMacCodeBlock, updateRendererOptions, render, currentPost])
+  }, [isMacCodeBlock, updateRendererOptions, render, currentPost])
 
   // 智能 DOM 更新 - 保留已加载的图片
   useEffect(() => {

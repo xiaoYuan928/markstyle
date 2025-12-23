@@ -1,5 +1,6 @@
 /* eslint-disable node/prefer-global/process */
 import OpenAI from 'openai'
+import { checkGuestUsage, deductCredits, getUserCredits, getUserFromRequest, recordGuestUsage, saveCoverGeneration } from '@/lib/credits'
 
 // 使用 OpenRouter 调用 GPT-4o-mini
 const openai = new OpenAI({
@@ -91,7 +92,7 @@ export async function PUT(req: Request) {
 // ========== 第二步：根据描述生成图片 ==========
 export async function POST(req: Request) {
   try {
-    const { prompt, width = 1024, height = 436 } = await req.json()
+    const { prompt, width = 1024, height = 436, fingerprint } = await req.json()
 
     if (!prompt || typeof prompt !== 'string') {
       return Response.json(
@@ -107,8 +108,53 @@ export async function POST(req: Request) {
       )
     }
 
+    // 获取客户端 IP 地址
+    const forwarded = req.headers.get('x-forwarded-for')
+    const ipAddress = forwarded ? forwarded.split(',')[0].trim() : null
+
+    // 检查用户积分
+    const user = await getUserFromRequest(req)
+    let userId: string | null = null
+    let isGuest = false
+
+    if (user) {
+      userId = user.userId
+      const credits = await getUserCredits(userId)
+
+      if (credits === null) {
+        return Response.json(
+          { error: '获取用户信息失败，请重新登录' },
+          { status: 401 },
+        )
+      }
+
+      if (credits < 1) {
+        return Response.json(
+          { error: '积分不足，请充值后再试', code: 'INSUFFICIENT_CREDITS' },
+          { status: 402 },
+        )
+      }
+    }
+    else {
+      // 未登录用户：服务端检查访客使用额度
+      isGuest = true
+      const guestUsage = await checkGuestUsage(fingerprint || null, ipAddress)
+
+      if (!guestUsage.allowed) {
+        return Response.json(
+          {
+            error: '今日免费额度已用完，登录获取更多额度',
+            code: 'GUEST_LIMIT_REACHED',
+            used: guestUsage.used,
+            remaining: guestUsage.remaining,
+          },
+          { status: 429 },
+        )
+      }
+    }
+
     const size = `${width}x${height}`
-    console.log('Generating image with prompt:', prompt, 'size:', size)
+    console.log('Generating image with prompt:', prompt, 'size:', size, 'user:', userId || 'guest')
 
     // 第一步：创建图片生成任务
     const createResponse = await fetch('https://api.evolink.ai/v1/images/generations', {
@@ -147,7 +193,7 @@ export async function POST(req: Request) {
 
       const statusResponse = await fetch(`https://api.evolink.ai/v1/tasks/${taskId}`, {
         headers: {
-          'Authorization': `Bearer ${process.env.EVOLINK_API_KEY}`,
+          Authorization: `Bearer ${process.env.EVOLINK_API_KEY}`,
         },
       })
 
@@ -157,6 +203,48 @@ export async function POST(req: Request) {
       if (statusData.status === 'completed' && statusData.results?.length > 0) {
         const imageUrl = statusData.results[0]
         console.log('Image generated:', imageUrl)
+
+        // 生成成功后扣减积分并保存记录
+        if (userId) {
+          const deductResult = await deductCredits(
+            userId,
+            1,
+            '生成封面图片',
+          )
+          if (!deductResult.success) {
+            console.error('Failed to deduct credits:', deductResult.error)
+          }
+          else {
+            console.log('Credits deducted, new balance:', deductResult.newBalance)
+          }
+
+          // 保存生成记录
+          const saveResult = await saveCoverGeneration({
+            userId,
+            prompt,
+            imageUrl,
+            width,
+            height,
+            creditsUsed: 1,
+          })
+          if (!saveResult.success) {
+            console.error('Failed to save cover generation:', saveResult.error)
+          }
+          else {
+            console.log('Cover generation saved:', saveResult.id)
+          }
+        }
+        else if (isGuest) {
+          // 记录访客使用
+          const recorded = await recordGuestUsage(fingerprint || null, ipAddress)
+          if (recorded) {
+            console.log('Guest usage recorded, fingerprint:', fingerprint, 'ip:', ipAddress)
+          }
+          else {
+            console.error('Failed to record guest usage')
+          }
+        }
+
         return Response.json({ imageUrl })
       }
 

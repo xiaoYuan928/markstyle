@@ -297,7 +297,8 @@ export function initRenderer(opts: IOpts = {}): RendererAPI {
     },
 
     image({ href, title, text }: Tokens.Image): string {
-      const subText = styledContent(`figcaption`, transform(opts.legend!, text, title))
+      const captionText = transform(opts.legend!, text, title)
+      const subText = captionText ? styledContent(`figcaption`, captionText) : ``
       const titleAttr = title ? ` title="${title}"` : ``
       // 添加 loading="lazy" 和 decoding="async" 优化图片加载
       return `<figure><img src="${href}" loading="lazy" decoding="async"${titleAttr} alt="${text}"/>${subText}</figure>`

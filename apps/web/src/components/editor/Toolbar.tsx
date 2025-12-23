@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ImageUploadDialog } from '@/components/editor/ImageUploadDialog'
-import { useEditorStore, usePostStore } from '@/stores'
+import { useEditorStore, usePostStore, useRenderStore } from '@/stores'
 
 /**
  * 格式化相对时间
  */
 function formatRelativeTime(dateString: string | undefined): string {
-  if (!dateString) return ''
+  if (!dateString)
+    return ''
 
   const date = new Date(dateString)
   const now = new Date()
@@ -19,11 +20,16 @@ function formatRelativeTime(dateString: string | undefined): string {
   const diffHours = Math.floor(diffMinutes / 60)
   const diffDays = Math.floor(diffHours / 24)
 
-  if (diffSeconds < 10) return '刚刚保存'
-  if (diffSeconds < 60) return `${diffSeconds}秒前保存`
-  if (diffMinutes < 60) return `${diffMinutes}分钟前保存`
-  if (diffHours < 24) return `${diffHours}小时前保存`
-  if (diffDays < 7) return `${diffDays}天前保存`
+  if (diffSeconds < 10)
+    return '刚刚保存'
+  if (diffSeconds < 60)
+    return `${diffSeconds}秒前保存`
+  if (diffMinutes < 60)
+    return `${diffMinutes}分钟前保存`
+  if (diffHours < 24)
+    return `${diffHours}小时前保存`
+  if (diffDays < 7)
+    return `${diffDays}天前保存`
 
   // 超过7天显示具体日期
   return `${date.getMonth() + 1}/${date.getDate()} 保存`
@@ -38,12 +44,14 @@ interface ToolbarButton {
 export function Toolbar() {
   const editor = useEditorStore(state => state.editor)
   const currentPost = usePostStore(state => state.posts.find(p => p.id === state.currentPostId))
+  const render = useRenderStore(state => state.render)
   const [savedTimeText, setSavedTimeText] = useState('')
   const [isUploadOpen, setIsUploadOpen] = useState(false)
 
   // 图片上传成功后插入到编辑器
   const handleUploadSuccess = (url: string) => {
-    if (!editor) return
+    if (!editor)
+      return
     const { from } = editor.state.selection.main
     const imageMarkdown = `![](${url})`
     editor.dispatch({
@@ -78,13 +86,42 @@ export function Toolbar() {
     let newContent = content
     let totalRemoved = 0
 
-    // 1. 处理图片 alt 文本：![img](url) -> ![](url)
+    // 1. 处理完整的图片语法（包括跨行情况）：![alt](url) 或 ![alt]\n(url) -> ![](url)
+    // 先处理跨行的图片语法
+    const crossLineImagePattern = /!\[([^\]]*)\][\t\v\f\r \xA0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF]*\n\s*(\([^)]+\))/g
+    newContent = newContent.replace(crossLineImagePattern, (match, alt, urlPart) => {
+      // 检查 alt 是否需要去除
+      const shouldRemoveAlt = !alt
+        || /^img$/i.test(alt)
+        || /^image$/i.test(alt)
+        || /^image[-_]?\d+$/i.test(alt)
+        || /^img[-_]?\d+$/i.test(alt)
+        || /^screenshot[-_]?\d*$/i.test(alt)
+        || /^\d+$/.test(alt)
+        || /^[a-f0-9]{8,}$/i.test(alt)
+        || /^图片?$/.test(alt)
+        || /^图\d+$/.test(alt)
+
+      if (shouldRemoveAlt) {
+        totalRemoved++
+        return `![]${urlPart}`
+      }
+      // 即使不去除 alt，也要合并成一行
+      return `![${alt}]${urlPart}`
+    })
+
+    // 2. 处理同一行的图片 alt 文本：![img](url) -> ![](url)
     const imageAltPatterns = [
-      { pattern: /!\[img\]/gi, replacement: '![]' },
-      { pattern: /!\[image\]/gi, replacement: '![]' },
-      { pattern: /!\[图片\]/g, replacement: '![]' },
-      { pattern: /!\[图\]/g, replacement: '![]' },
-      { pattern: /!\[图\d+\]/g, replacement: '![]' }, // ![图1] ![图2] 等
+      { pattern: /!\[img\](\([^)]+\))/gi, replacement: '![]$1' },
+      { pattern: /!\[image\](\([^)]+\))/gi, replacement: '![]$1' },
+      { pattern: /!\[图片\](\([^)]+\))/g, replacement: '![]$1' },
+      { pattern: /!\[图\](\([^)]+\))/g, replacement: '![]$1' },
+      { pattern: /!\[图\d+\](\([^)]+\))/g, replacement: '![]$1' },
+      { pattern: /!\[image[-_]?\d+\](\([^)]+\))/gi, replacement: '![]$1' },
+      { pattern: /!\[img[-_]?\d+\](\([^)]+\))/gi, replacement: '![]$1' },
+      { pattern: /!\[screenshot[-_]?\d*\](\([^)]+\))/gi, replacement: '![]$1' },
+      { pattern: /!\[\d+\](\([^)]+\))/g, replacement: '![]$1' },
+      { pattern: /!\[[a-f0-9]{8,}\](\([^)]+\))/gi, replacement: '![]$1' },
     ]
 
     for (const { pattern, replacement } of imageAltPatterns) {
@@ -95,13 +132,16 @@ export function Toolbar() {
       newContent = newContent.replace(pattern, replacement)
     }
 
-    // 2. 处理单独一行的图片注释文本
+    // 3. 处理单独一行的图片注释文本
     const linePatterns = [
       /^[ \t]*img[ \t]*$/gim,
       /^[ \t]*image[ \t]*$/gim,
+      /^[ \t]*image[-_]?\d+[ \t]*$/gim, // image-20251222112736237
+      /^[ \t]*img[-_]?\d+[ \t]*$/gim,
+      /^[ \t]*screenshot[-_]?\d*[ \t]*$/gim,
       /^[ \t]*图片[ \t]*$/gm,
       /^[ \t]*图片说明[ \t]*$/gm,
-      /^[ \t]*图[ \t]*\d*[ \t]*$/gm,
+      /^[ \t]*图[ \t]*(?:\d+[ \t]*)?$/gm,
       /^[ \t]*<figcaption>.*?<\/figcaption>[ \t]*$/gim,
     ]
 
@@ -132,6 +172,9 @@ export function Toolbar() {
       },
     })
 
+    // 显式触发预览重新渲染
+    render(newContent)
+
     toast.success(`已去除 ${totalRemoved} 个图片注释`)
   }
 
@@ -155,7 +198,6 @@ export function Toolbar() {
     if (!editor)
       return
     const { from, to } = editor.state.selection.main
-    const selectedText = editor.state.doc.sliceString(from, to)
 
     // If no text is selected, insert placeholder and select it
     if (from === to && placeholder) {

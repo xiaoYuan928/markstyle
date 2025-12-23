@@ -1,6 +1,6 @@
 import type { ThemeName } from '@md/shared/configs'
-import { themeOptions } from '@md/shared/configs'
 import { applyTheme as applyThemeCore } from '@md/core/theme'
+import { themeOptions } from '@md/shared/configs'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -61,7 +61,6 @@ interface ThemeState {
   isUseIndent: boolean
   isUseJustify: boolean
   isMacCodeBlock: boolean
-  isShowLineNumber: boolean
 
   // Actions
   setTheme: (theme: ThemeName) => void
@@ -74,7 +73,6 @@ interface ThemeState {
   setUseIndent: (use: boolean) => void
   setUseJustify: (use: boolean) => void
   setMacCodeBlock: (use: boolean) => void
-  setShowLineNumber: (show: boolean) => void
   resetTheme: () => void
   applyCurrentTheme: () => Promise<void>
 }
@@ -90,7 +88,6 @@ const defaultState = {
   isUseIndent: false,
   isUseJustify: false,
   isMacCodeBlock: true,
-  isShowLineNumber: true,
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -132,7 +129,6 @@ export const useThemeStore = create<ThemeState>()(
       setUseIndent: isUseIndent => set({ isUseIndent }),
       setUseJustify: isUseJustify => set({ isUseJustify }),
       setMacCodeBlock: isMacCodeBlock => set({ isMacCodeBlock }),
-      setShowLineNumber: isShowLineNumber => set({ isShowLineNumber }),
 
       resetTheme: () => {
         set(defaultState)

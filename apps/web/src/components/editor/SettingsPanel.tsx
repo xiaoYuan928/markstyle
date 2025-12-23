@@ -14,14 +14,12 @@ export function SettingsPanel() {
     fontSize,
     lineHeight,
     maxWidth,
-    isShowLineNumber,
     setTheme,
     setPrimaryColor,
     setFontFamily,
     setFontSize,
     setLineHeight,
     setMaxWidth,
-    setShowLineNumber,
     resetTheme,
   } = useThemeStore()
 
@@ -170,7 +168,7 @@ export function SettingsPanel() {
                         : 'hover:ring-2 hover:ring-offset-2 dark:ring-offset-gray-900',
                     )}
                     style={{
-                      backgroundColor: color.value,
+                      'backgroundColor': color.value,
                       '--tw-ring-color': color.value,
                     } as React.CSSProperties}
                     title={color.label}
@@ -200,24 +198,6 @@ export function SettingsPanel() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 dark:text-gray-300">显示行号</span>
-              <button
-                onClick={() => setShowLineNumber(!isShowLineNumber)}
-                className={cn(
-                  'w-9 h-5 rounded-full relative transition-colors',
-                  isShowLineNumber ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600',
-                )}
-              >
-                <span
-                  className={cn(
-                    'absolute top-1 w-3 h-3 bg-white rounded-full transition-all',
-                    isShowLineNumber ? 'right-1' : 'left-1',
-                  )}
-                />
-              </button>
             </div>
 
             <div className="flex items-center justify-between">

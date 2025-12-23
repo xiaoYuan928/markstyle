@@ -1,7 +1,9 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useAuth } from '@/components/auth'
+import { UpgradeDialog } from '@/components/payment/UpgradeDialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -10,9 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { deductGuestCredit, getGuestRemainingCount, GUEST_DAILY_LIMIT } from '@/lib/credits'
+import { getFingerprint } from '@/lib/fingerprint'
+import { getSupabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useImageHostStore, usePostStore } from '@/stores'
 import { uploadToGitHub } from '@/utils/imageUpload'
+import { CoverHistoryDialog } from './CoverHistoryDialog'
 
 // 图片尺寸预设
 const IMAGE_SIZE_PRESETS = [
@@ -37,11 +43,31 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [isUpgradeOpen, setIsUpgradeOpen] = useState(false)
+  const [guestCredits, setGuestCredits] = useState(GUEST_DAILY_LIMIT)
 
+  const { session, userProfile, refreshCredits } = useAuth()
+
+  // 更新访客额度显示
+  useEffect(() => {
+    if (!session && open) {
+      setGuestCredits(getGuestRemainingCount())
+    }
+  }, [session, open])
   const currentPost = usePostStore(state => state.currentPost)
   const { githubConfig, isConfigured } = useImageHostStore()
 
   const post = currentPost()
+
+  // 获取 access token 用于 API 调用
+  const getAccessToken = useCallback(async (): Promise<string | null> => {
+    if (!session)
+      return null
+    const supabase = getSupabase()
+    const { data } = await supabase.auth.getSession()
+    return data.session?.access_token ?? null
+  }, [session])
 
   // 第一步：AI 分析文章，生成图片描述
   const handleAnalyzeArticle = useCallback(async () => {
@@ -94,30 +120,88 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
       return
     }
 
+    // 检查额度（前端预检）
+    if (session) {
+      // 已登录用户检查积分
+      if (userProfile && userProfile.credits < 1) {
+        setIsUpgradeOpen(true)
+        return
+      }
+    }
+    else {
+      // 访客检查每日额度
+      if (guestCredits < 1) {
+        setIsUpgradeOpen(true)
+        return
+      }
+    }
+
     const sizeConfig = IMAGE_SIZE_PRESETS.find(s => s.name === selectedSize) || IMAGE_SIZE_PRESETS[0]
 
     setIsGenerating(true)
     setGeneratedImage(null)
 
     try {
+      // 构建请求头
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+
+      // 如果已登录，添加 Authorization header
+      const token = await getAccessToken()
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+
+      // 获取设备指纹（用于访客防刷）
+      let fingerprint: string | undefined
+      if (!session) {
+        try {
+          fingerprint = await getFingerprint()
+        }
+        catch (e) {
+          console.warn('Failed to get fingerprint:', e)
+        }
+      }
+
       const response = await fetch('/api/generate-cover', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           prompt,
           width: sizeConfig.width,
           height: sizeConfig.height,
+          fingerprint,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
+        // 特殊处理积分不足错误
+        if (data.code === 'INSUFFICIENT_CREDITS' || data.code === 'GUEST_LIMIT_REACHED') {
+          setIsUpgradeOpen(true)
+          // 更新访客额度显示
+          if (!session && data.remaining !== undefined) {
+            setGuestCredits(data.remaining)
+          }
+          return
+        }
         throw new Error(data.error || '生成失败')
       }
 
       setGeneratedImage(data.imageUrl)
       toast.success('封面生成成功')
+
+      // 刷新额度显示
+      if (session) {
+        refreshCredits()
+      }
+      else {
+        // 访客更新本地额度显示（服务端已记录）
+        deductGuestCredit()
+        setGuestCredits(getGuestRemainingCount())
+      }
     }
     catch (error) {
       toast.error(error instanceof Error ? error.message : '生成失败，请重试')
@@ -125,11 +209,12 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
     finally {
       setIsGenerating(false)
     }
-  }, [prompt, selectedSize])
+  }, [prompt, selectedSize, session, userProfile, guestCredits, getAccessToken, refreshCredits])
 
   // 下载图片
   const handleDownload = useCallback(async () => {
-    if (!generatedImage) return
+    if (!generatedImage)
+      return
 
     try {
       const response = await fetch(generatedImage)
@@ -153,7 +238,8 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
 
   // 复制图片到剪贴板
   const handleCopyImage = useCallback(async () => {
-    if (!generatedImage) return
+    if (!generatedImage)
+      return
 
     try {
       const response = await fetch(generatedImage)
@@ -179,7 +265,8 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
 
         pngBlob = await new Promise<Blob>((resolve, reject) => {
           canvas.toBlob((b) => {
-            if (b) resolve(b)
+            if (b)
+              resolve(b)
             else reject(new Error('转换失败'))
           }, 'image/png')
         })
@@ -201,7 +288,8 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
 
   // 上传到图床
   const handleUploadToHost = useCallback(async () => {
-    if (!generatedImage) return
+    if (!generatedImage)
+      return
 
     if (!isConfigured()) {
       toast.error('请先配置 GitHub 图床（点击工具栏图片按钮）')
@@ -241,12 +329,38 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">auto_awesome</span>
-            AI 生成公众号封面
-          </DialogTitle>
-          <DialogDescription>
-            使用 AI 为你的文章生成精美的公众号封面图
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">auto_awesome</span>
+              AI 生成公众号封面
+            </DialogTitle>
+            {session && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsHistoryOpen(true)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <span className="material-symbols-outlined text-[18px] mr-1">history</span>
+                历史记录
+              </Button>
+            )}
+          </div>
+          <DialogDescription className="flex items-center justify-between">
+            <span>使用 AI 为你的文章生成精美的公众号封面图</span>
+            <span className={cn(
+              'text-xs font-medium px-2 py-0.5 rounded-full',
+              session
+                ? 'bg-primary/10 text-primary'
+                : guestCredits > 0
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+            )}
+            >
+              {session
+                ? `剩余 ${userProfile?.credits ?? '--'} 次`
+                : `今日免费 ${guestCredits}/${GUEST_DAILY_LIMIT} 次`}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -316,7 +430,11 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
                 >
                   {size.label}
                   {size.desc && (
-                    <span className="ml-1 text-[10px] text-primary">({size.desc})</span>
+                    <span className="ml-1 text-[10px] text-primary">
+                      (
+                      {size.desc}
+                      )
+                    </span>
                   )}
                   <span className="ml-1 text-[10px] text-gray-400">{size.ratio}</span>
                 </button>
@@ -408,6 +526,20 @@ export function CoverGeneratorDialog({ open, onOpenChange }: CoverGeneratorDialo
           )}
         </div>
       </DialogContent>
+
+      {/* 历史记录弹窗 */}
+      <CoverHistoryDialog
+        open={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+      />
+
+      {/* 额度不足引导弹窗 */}
+      <UpgradeDialog
+        open={isUpgradeOpen}
+        onOpenChange={setIsUpgradeOpen}
+        type={session ? 'user' : 'guest'}
+        remainingCredits={session ? (userProfile?.credits ?? 0) : guestCredits}
+      />
     </Dialog>
   )
 }
