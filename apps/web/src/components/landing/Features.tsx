@@ -6,8 +6,8 @@ const features = [
   },
   {
     icon: 'palette',
-    title: '8+ 精美主题',
-    description: '多种风格主题可选：简约、优雅、科技、霓虹等，满足不同需求',
+    title: '20+ 精美主题',
+    description: '从简洁、国风到赛博、纸感、手绘，持续更新，满足不同需求',
   },
   {
     icon: 'content_copy',
@@ -25,9 +25,9 @@ const features = [
     description: '支持明暗主题切换，保护眼睛，夜间编辑更舒适',
   },
   {
-    icon: 'money_off',
-    title: '完全免费',
-    description: '无需注册、无需付费，所有功能免费开放，无任何限制',
+    icon: 'auto_awesome',
+    title: 'AI 封面生成',
+    description: '免登录每日 3 次，注册赠 20 积分，支持多尺寸公众号封面',
   },
 ]
 

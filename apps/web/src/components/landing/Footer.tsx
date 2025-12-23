@@ -12,7 +12,7 @@ export function Footer() {
             准备好让你的公众号文章更出彩了吗？
           </h2>
           <p className="text-gray-400 mb-8 max-w-xl mx-auto">
-            免费使用，无需注册，立即开始创作精美的公众号内容
+            免费使用，无需注册；每日 3 次免登录封面生成，注册再送 20 积分。
           </p>
           <Link
             href="/"
@@ -21,6 +21,10 @@ export function Footer() {
             <span className="material-symbols-outlined mr-2">rocket_launch</span>
             开始使用 MarkStyle
           </Link>
+          <div className="mt-4 text-sm text-gray-400">
+            有想法或问题？
+            <a href="mailto:hi@markstyle.org" className="text-blue-300 hover:text-blue-200 underline underline-offset-4">发送反馈</a>
+          </div>
         </div>
       </div>
 
@@ -38,11 +42,18 @@ export function Footer() {
             <Link href="/" className="hover:text-white transition-colors">
               编辑器
             </Link>
+            <a href="mailto:hi@markstyle.org" className="hover:text-white transition-colors">
+              反馈与建议
+            </a>
           </div>
 
           {/* Copyright */}
           <div className="text-sm text-gray-500">
-            &copy; {currentYear} MarkStyle. All rights reserved.
+            &copy;
+            {' '}
+            {currentYear}
+            {' '}
+            MarkStyle. All rights reserved.
           </div>
         </div>
       </div>
