@@ -42,13 +42,13 @@ export function SettingsPanel() {
         {/* Article Theme Section */}
         <div>
           <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">文章风格</label>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {themeOptions.map(option => (
               <button
                 key={option.value}
                 onClick={() => setTheme(option.value)}
                 className={cn(
-                  'px-3 py-1.5 rounded-md text-xs font-medium transition-colors text-center whitespace-nowrap',
+                  'w-full h-9 px-2 rounded-md text-xs font-medium transition-colors text-center whitespace-nowrap',
                   theme === option.value
                     ? 'border-2 border-primary bg-primary/10 text-primary'
                     : 'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700',

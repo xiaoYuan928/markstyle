@@ -45,6 +45,46 @@ export const themeOptionsMap = {
     value: `tech`,
     desc: `SaaS风格`,
   },
+  magazine: {
+    label: `杂志`,
+    value: `magazine`,
+    desc: `纸感杂志风`,
+  },
+  duo: {
+    label: `双色`,
+    value: `duo`,
+    desc: `极简双色`,
+  },
+  glass: {
+    label: `玻璃`,
+    value: `glass`,
+    desc: `玻璃拟态淡彩`,
+  },
+  grid: {
+    label: `方格本`,
+    value: `grid`,
+    desc: `网格手账`,
+  },
+  newspaper: {
+    label: `报纸`,
+    value: `newspaper`,
+    desc: `极简报纸`,
+  },
+  letter: {
+    label: `信笺`,
+    value: `letter`,
+    desc: `邮戳信笺`,
+  },
+  card: {
+    label: `卡片`,
+    value: `card`,
+    desc: `百科卡片`,
+  },
+  doodle: {
+    label: `涂鸦`,
+    value: `doodle`,
+    desc: `手绘涂鸦`,
+  },
 }
 
 export const themeOptions: IConfigOption<ThemeName>[] = [
@@ -87,5 +127,45 @@ export const themeOptions: IConfigOption<ThemeName>[] = [
     label: `科技蓝`,
     value: `tech`,
     desc: `SaaS风格`,
+  },
+  {
+    label: `杂志`,
+    value: `magazine`,
+    desc: `纸感杂志风`,
+  },
+  {
+    label: `双色`,
+    value: `duo`,
+    desc: `极简双色`,
+  },
+  {
+    label: `玻璃`,
+    value: `glass`,
+    desc: `玻璃拟态淡彩`,
+  },
+  {
+    label: `方格本`,
+    value: `grid`,
+    desc: `网格手账`,
+  },
+  {
+    label: `报纸`,
+    value: `newspaper`,
+    desc: `极简报纸`,
+  },
+  {
+    label: `信笺`,
+    value: `letter`,
+    desc: `邮戳信笺`,
+  },
+  {
+    label: `卡片`,
+    value: `card`,
+    desc: `百科卡片`,
+  },
+  {
+    label: `涂鸦`,
+    value: `doodle`,
+    desc: `手绘涂鸦`,
   },
 ]

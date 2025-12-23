@@ -1,18 +1,31 @@
 'use client'
 
+import type { ThemeName } from '@md/shared/configs'
+import { useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 import { Editor } from '@/components/editor/Editor'
 import { usePostStore } from '@/stores'
+import { useThemeStore } from '@/stores/theme'
 
 export default function EditorPage() {
   const initialize = usePostStore(state => state.initialize)
   const isInitialized = usePostStore(state => state.isInitialized)
   const isLoading = usePostStore(state => state.isLoading)
+  const searchParams = useSearchParams()
+  const setTheme = useThemeStore(state => state.setTheme)
 
   // Initialize posts from IndexedDB
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  // Apply theme from URL query (?theme=xxx)
+  useEffect(() => {
+    const themeParam = searchParams.get('theme')
+    if (themeParam) {
+      setTheme(themeParam as ThemeName)
+    }
+  }, [searchParams, setTheme])
 
   // Show loading state
   if (!isInitialized || isLoading) {

@@ -28,7 +28,7 @@ export function Hero() {
 
         {/* Subtitle */}
         <p className="max-w-2xl mx-auto text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-10">
-          免费的 Markdown 编辑器，8+ 精美主题，一键复制到微信公众号。
+          免费的 Markdown 编辑器，20+ 精美主题持续更新，一键复制到微信公众号，AI 生成封面（免登录每日 3 次，注册赠 20 积分）。
           <br className="hidden sm:block" />
           支持从飞书、Notion 粘贴内容自动转换。
         </p>
@@ -45,18 +45,18 @@ export function Hero() {
         </div>
 
         {/* Stats */}
-        <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
+        <div className="mt-16 grid grid-cols-3 gap-8 max-w-3xl mx-auto">
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">8+</div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">20+</div>
             <div className="text-sm text-gray-500 dark:text-gray-400">精美主题</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">100%</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">免费使用</div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">3 次/天</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">免登录生成封面</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-900 dark:text-white">0</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">需登录</div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-white">20</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">注册赠积分（封面额度）</div>
           </div>
         </div>
       </div>
