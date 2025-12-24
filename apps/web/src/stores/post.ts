@@ -215,7 +215,16 @@ export const usePostStore = create<PostState>()((set, get) => ({
     saveTimeout = setTimeout(async () => {
       try {
         if (syncMode === 'cloud') {
-          await cloudDocumentsAPI.update(id, updates)
+          const success = await cloudDocumentsAPI.update(id, updates)
+          // 云同步失败时，尝试保存到本地作为备份
+          if (!success) {
+            try {
+              await documentsAPI.update(id, updates)
+            }
+            catch {
+              // 本地保存也失败，可能是 ID 格式不兼容，静默忽略
+            }
+          }
         }
         else {
           await documentsAPI.update(id, updates)

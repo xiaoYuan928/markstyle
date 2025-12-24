@@ -37,7 +37,10 @@ export function EditorHeader() {
     setIsCopying(true)
     try {
       await copyToWeChat(primaryColor)
-      toast.success('复制成功！请在公众号编辑器中粘贴')
+      toast.success('复制成功！打开公众号后台，在编辑器中粘贴即可', {
+        duration: 5000,
+        description: '已复制富文本格式，保留所有样式',
+      })
     }
     catch (error) {
       console.error('Copy failed:', error)
@@ -58,28 +61,7 @@ export function EditorHeader() {
 
       {/* Right: Actions */}
       <div className="flex items-center space-x-2">
-        {/* Generate Cover Button */}
-        <button
-          onClick={() => setShowCoverDialog(true)}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-primary text-primary hover:bg-primary/10 transition-colors text-sm font-medium"
-          title="AI 生成公众号封面"
-        >
-          <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-          <span className="hidden sm:inline">生成封面</span>
-        </button>
-
-        {/* Copy to WeChat Button - Primary Action */}
-        <button
-          onClick={handleCopyToWeChat}
-          disabled={isCopying}
-          className="flex items-center space-x-1.5 px-4 py-1.5 rounded-md bg-primary hover:bg-primary/90 text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="material-symbols-outlined text-[18px]">content_copy</span>
-          <span className="hidden sm:inline">{isCopying ? '复制中...' : '复制到公众号'}</span>
-        </button>
-
-        <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
-
+        {/* Export Button - Secondary */}
         <button
           onClick={handleExport}
           className="hidden md:flex items-center space-x-1 px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors text-sm font-medium"
@@ -87,6 +69,26 @@ export function EditorHeader() {
         >
           <span className="material-symbols-outlined text-[18px]">download</span>
           <span>导出</span>
+        </button>
+
+        {/* Generate Cover Button - Secondary */}
+        <button
+          onClick={() => setShowCoverDialog(true)}
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+          title="AI 生成公众号封面"
+        >
+          <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+          <span className="hidden sm:inline">生成封面</span>
+        </button>
+
+        {/* Copy to WeChat Button - Primary Action (emphasized) */}
+        <button
+          onClick={handleCopyToWeChat}
+          disabled={isCopying}
+          className="flex items-center space-x-1.5 px-5 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <span className="material-symbols-outlined text-[20px]">content_copy</span>
+          <span className="hidden sm:inline">{isCopying ? '复制中...' : '复制到公众号'}</span>
         </button>
 
         <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2" />

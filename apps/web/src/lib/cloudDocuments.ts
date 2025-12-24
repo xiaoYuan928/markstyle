@@ -111,16 +111,25 @@ export const cloudDocumentsAPI = {
 
   /**
    * 更新文档
+   * @returns true 如果更新成功，false 如果失败（静默处理）
    */
-  async update(id: string, updates: Partial<Pick<CloudDocument, 'title' | 'content'>>): Promise<void> {
-    const response = await authFetch('/api/documents', {
-      method: 'PUT',
-      body: JSON.stringify({ id, ...updates }),
-    })
+  async update(id: string, updates: Partial<Pick<CloudDocument, 'title' | 'content'>>): Promise<boolean> {
+    try {
+      const response = await authFetch('/api/documents', {
+        method: 'PUT',
+        body: JSON.stringify({ id, ...updates }),
+      })
 
-    if (!response.ok) {
-      const data = await response.json()
-      throw new Error(data.error || '更新文档失败')
+      if (!response.ok) {
+        const data = await response.json()
+        console.warn('Cloud update failed:', data.error || '更新文档失败')
+        return false
+      }
+      return true
+    }
+    catch (error) {
+      console.warn('Cloud update error:', error)
+      return false
     }
   },
 

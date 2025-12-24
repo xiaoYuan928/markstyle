@@ -4,6 +4,7 @@ import type { ThemeName } from '@md/shared/configs'
 import { useSearchParams } from 'next/navigation'
 import { Suspense, useEffect } from 'react'
 import { Editor } from '@/components/editor/Editor'
+import { OnboardingDialog } from '@/components/onboarding/OnboardingDialog'
 import { usePostStore } from '@/stores'
 import { useThemeStore } from '@/stores/theme'
 
@@ -43,7 +44,12 @@ function EditorPageContent() {
     return <LoadingSpinner />
   }
 
-  return <Editor />
+  return (
+    <>
+      <Editor />
+      <OnboardingDialog />
+    </>
+  )
 }
 
 export default function EditorPage() {
